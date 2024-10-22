@@ -966,7 +966,75 @@ lin.	cmd.	   mem.
 
 	até aqui, cobrimos como as coisas eram antigamente.
 
+(22/10/2024)
+	
+	Gerenciamento de memória:
+	
+						#  -> ocupado
+|    A	  |   |     B	  | C |	  | 	D     |	E |-> processos
+|#|#|#|#|#| | |#|#|#|#|#|#|#|#| | |#|#|#|#|#|#|#|#| | | |...|	
+ 0 1 2 3 4 5 6 7 8 9 10			 20
+		     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 ...
+[mapa de bits]
+|1|1|1|1|0|0|0|1|1|1|1|1|1|1|1|0|0|1|1|1|1|1|1|1|1|0|0|0|...|
 
+[lista]
+|P|0|5|→|L|5|2|→|P|7|6|→|P|13|2|→|L|15|2|→|P|17|6|→|P|23|2|→
+
+P = processo
+L = Livre
+|0|5|→|inicio|tamanho|
+
+lista é mais rápido, no mapa de bits você faz uma busca
+exaustiva, correndo bit a bit e procurando um espaço
+que possa armazenar aquilo que você quer.
+
+[algoritmos]
+>> First fit:
+   No primeiro lugar que couber a informação ele coloca.
+   
+>> Next fit:
+   Guarda o nó do último alocado e guarda essa última
+   alocação, imagine que ele alocou em |L|10|5|, assim
+   na próxima alocação, se ele precisar alocar menos,
+   ele percorre a lista para a esquerda, (imaginando
+   que a lista esteja ordenada da esquerda para a direita)
+   caso precise de mais espaço, vai para o outro lado.
+   esse método não é interessante porque, a lista precisa
+   ser duplamente encadeada e precisa ser ordenada.
+   
+>> Best fit: (o pior inclusive)
+   Corre toda a lista procurando o menor espaço livre
+   que se adeque ao que o processo precise, ele deveria
+   economizar espaço, mas é muito lento e faz com que
+   a memória se fragmenta. Imagine assim:
+   O SO precisa alocar 5 unidades de memória, ele tem
+   um nó de 8 espaços livres, sobram 3, aí ele precisa
+   alocar outro de 5, ele faz a alocação em outro nó
+   fazendo sobrar outro pedacinho de memória livre,
+   eventualmente, ele fragmenta a memória toda.
+   
+>> Worst fit:
+   Best fit mas pegando o maior espaço.
+   
+>> Quick fit:
+   Separa uma lista assim:
+   
+   |Espaços Livres |posições livres|
+   	|2|------→|10|→|14|→|29|→ ...
+   	|4|------→|16|→|80|→	       ...
+   	|6|------→|2|→|98|→ 	       ...
+   	|.|------→ 		       ...
+   
+   O problema disso é fazer a fusão de espaços livres
+   é complicado saber quem são seus vizinhos, nessa
+   tabela apenas se sabe o espaço livre e tem uma lista.
+   
+   
+   
+   (Tarefa: 
+   	Pesquisar sobre Buddy/Slab, a forma como
+   	o Linux gerencia a memória)
 
 
 
