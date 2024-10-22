@@ -1,0 +1,976 @@
+(12/08/2024)
+
+diretório é um arquivo que contem ponteiros para arquivos
+	quando um diretório é criado, obrigatóriamente há
+	os diretórios . e .. (atual e anterior)
+	
+
+no linux os dispositivos de Hardware são representados por
+arquivos, para facilitar o acesso aos dispositivos de hardware.
+
+
+
+ls -la "arquivos ocultos" -> todos os arquivos que começam com .
+cd = "change directory"
+ps -> mostra as informações da bash
+
+
+atributos
+d -> directory
+l -> link simbólico armazena o camimnho para o diretório
+	quando de direciona um comando para um link
+	o comando é direcionado para o diretório
+	(menos quando é para deletar) 
+	ln -s "nome do link" "diretório alvo"	
+- -> arquivo regular é um arquivo que armazena dados
+c -> arquivo de dispositivo baseado em caractere
+	aquilo que se pode enviar e receber caracteres dele
+b -> arquivo de dispositivo baseado em bloco
+	aquilo em que se grava dados
+	
+
+	
+arquivo exemplo:
+-rwxrw-r--  1 aluno aluno   60 ago  6 10:12 script.doc
+-----------------------------------------------------------
+-rwxrw-r--
+ ^^^ -> owner (dono do arquivo)
+    ^^^ -> group (grupo)	
+       ^^^ -> outro
+ r -> read, ler o arquivo (cat)
+ w -> write, escrever no arquivo (vi)
+ x -> execute, executar o arquivo (./)
+ ----------------------------------------------------------
+	    1 aluno aluno   
+		^ -> dono (owner)
+		     ^ -> grupo
+-----------------------------------------------------------
+		     60 
+		     ^ -> tamanho
+-----------------------------------------------------------
+			ago  6 10:12 script.doc	
+			^ -> data e nome	     
+-----------------------------------------------------------
+
+o que dá para fazer com um arquivo:
+
+abrir	(open) -> falar ao SO que há um processo usando o arquivo
+fechar	(close)
+criar	(create)		cat > "nome"
+deletar	(delete)		rm "nome" / rm -r / rmdir
+write  	(escrever)		
+read 	(ler) 			cat
+append 	(escrever no fim)	cat >>
+seek   	( posicionar o ponteiro de caractere)
+
+
+------------ SOBRE OS ARQUVOS EXE ----------------------------
+arquivos executáveis tem seu formato em cada SO, no linux é ELF
+(Executable and Linkable Format)
+--------------------------------------------------------------
+
+Tipos de acesso:
+	Sequencial: quero ler o byte 100, devo começar do 1, 2...
+	Aleatório: quero ler o byte 100, leio o 100.
+	
+--------------------------------------------------------------
+	Como funciona o disco: (pg 194 do livro)
+
+MBR -> master boot record (registro de inicialização mestre)
+Tabela de partições -> é uma tabela que mostra onde tudo está
+		       gravado, geralmente há ela e uma cópia
+
+(no livro está na horizontal)	 daqui para baixo
+|Bloco de inicialização	| -> inicia o SO
+|      Superbloco	| -> qual o tipo do bloco, tamanho etc.
+|   Ger. Espaço Livre	| -> diz qual parte esta livre, bitmap
+|        I-nodes	| -> ED que representa o arquivo
+|    Diretório Raiz	| -> O 1° Dir da árvore
+| Arquivos e Diretorios	| -> O restante. (kernel aqui)
+
+* Superbloco:	informações sobre o sistema de arquivos,
+		qual o tipo, como foi formatado, o número
+		mágico
+		
+* Ger. Esp. L:	informa o sistema de arquivos onde está livre
+		se tiver algo errado pode ser que sejam gravados
+		em cima de outros arquivos.
+		
+* I-nodes: 	cada arquivo tem um I-node
+		basicamente o RG do arquivo
+		lf -li mostra o numero do I-node
+
+		tem duas partes:
+		> Atributos:
+		--------> Número do I-Node
+		--------> Proprietário 	(UID)
+		--------> Grupo	       	(GID)
+		--------> Datas		(Criação/Modificação)
+		--------> Tipo		(d/c/-/l/b/...)
+		--------> Permissões	(r/w/x/...)
+		
+				
+		> Blocos:
+		--------> Endereço do bloco onde está armazenado
+		
+		se for um diretório, lá no bloco haverá algo como:
+		
+		      BLOCO:
+		| NOME 	| I-NODE  |  <-	| N° 1250   |
+		| .	| 1250	  |	| owner	    |
+		| ..	| anterior|	| group	    |
+		|arquivo| 1842	  |	| tipo dir. |
+		|	|	  |	| Bloco 1000|
+		
+		
+	i-node em struct
+	struct inode{
+	  attr atributos;
+	  int blocos[15] (15 no linux)
+	}	
+
+* Arquivos e diretórios:
+		Seus dados estão todos aí
+		antes dos Arquivos e Diretórios
+		estão os metadados*
+			-> O que dá significado ao dado
+			-> I-Node é metadado
+
+(13/08/2024) (>)
+
+MBR sabe onde está o kernel do SO, ele executa o codigo em memória
+que consequentemente faz o resto.
+	> olha a tabela de partições
+	> vê qual a partição ativa (a com o flag de inicializar)
+	> entra na partição e executa o kernel
+	
+	O grub (seletor de SO) interrompe esse processo no meio
+	para que você escolha o SO que deseja, aí 
+
+na compilação do kernel:
+	módulo -> é linkado e carregado quando precisa
+	built in -> é carregado no arquivo do kernel
+		    é mas rápido mas acaba pesando no arquivo
+		    do kernel.
+
+--------------------------------------------------------------
+20/08/2024
+
+em alocação contigua:
+
+vantagens
+
+- leitura rápida pois os arquivos estão em sequência
+- as entradas de diretório precisam apenas do bloco inicial e
+  a quantidade de blocos do arquivo.
+  
+desvantagens
+
+- ocorre a fragmentação ao longo do tempo, isso inviabiliza a 
+  gravação de arquivos grandes.
+- a desfragmentação para a gravação demoraria muito.
+
+
+em  alocação por lista encadeada:
+
+vantagens
+
+- você pode usar todos os blocos, não há necessidades de lacunas
+- só precisa armazenar o endereço do 1° bloco.
+
+desvantagens
+
+- leituras lentas. precisa-se ler n vezes para encontrar o que quer
+- um bloco precisa ceder espaço para armazenar o ponteiro
+
+
+em alocação por lista encadeada com tabela em memória:
+
+vantagens
+
+- as mesmas da lista encadeada
+- os blocos não precisam mais armazenar os ponteiros
+- o acesso é mais rápido por ser feito em ram
+- é suportado por muitos sistemas
+
+desvantagens [!]
+
+- para discos grandes a tabela será grande:
+	-> para um disco de 1TB
+	1.000.000.000.000 bytes / 4.000 bytes (4kb tamanho do bloco)
+	= 250.000.000 blocos * 8 bytes (64 bits)
+	= 2.000.000.000 Bytes (2GB)
+	2 GB em memória
+
+
+
+como saber quantos bits deve ter cada bloco
+(16 bits, 32 bits, 64 bits)
+
+16b -> 2¹⁶ = 65.536, se a quantidade de blocos couber aqui, use
+		     isso.
+
+em alocação por I-node:
+
+vantagens
+
+- só precisa estar em memória quando o arquivo está em uso
+- o numero de arquivos abertos pode ser configurado
+- espaço ocupado em memória é proporcional aos arquivos abertos
+
+desvantagens
+
+- tamanho fixo, a quantidade de blocos endereçados é limitado
+	(pode ser resolvido com indireção)
+	
+	
+(indireção)
+no ext3 os 12 primeiros endereços são para blocos de dados
+bloco 13 do inode -> (bloco indireto simples)
+(bloco indireto simples) -> blocos de dados
+
+14 bloco indireto duplo -> blocos indiretos de endereco
+			-> blocos de dados
+
+15 bloc indireto triplo -> blocos indiretos de endereço
+				-> blocos ... de endereço
+					-> blocos de dados
+--------------------------------------------------------------
+
+arquivos compartilhados:
+
+raiz/dirB/subDirB/arquivocomp
+raiz/dirC/subDirC/subSubDirC/arquivocomp
+
+criar link simbólico:
+ls -s [arquivo alvo] [nome do link]
+	^ podem ser caminho ^
+ 
+se um cat for feito em um link:
+$ cat nomedolink
+
+a chama de sistema vai ser redirecionada para o arquivo alvo.
+Inode do link	  Inode do Arquivo
+|  192390  |	  |  187522  |
+|"caminho" | ---> | blocos   |
+
+é mais rapido abrir um arquivo normal do que abrir um
+link SIMBÓLICO
+
+
+Links Rígidos: (hardlinks)
+
+ln [nome do arquivo] [nome do link]
+
+-> o Inode é o mesmo do arquivo alvo.
+
+|dir.	 |Inode	|	|Inode teste|
+|.	 |  ?	|	|tipo: reglr|
+|..	 |  ?	|	|links: 2   |
+|teste	 |306623|	|...	    |
+|hrdlink |306623|	|...	    |
+
+não é uma cópia do arquivo, o arquivo só existe um
+o hardlink apenas aponta para o mesmo Inode
+
+é mais leve, o link simbólico tem um inode próprio.
+é mais rápido, abrir um link rígido é igual abrir um arquivo,
+basicamente o link rígido aponta para os blocos do arquivo
+como se fosse o próprio.
+
+se o arquivo tiver um hardlink e o original for apagado
+o hardlink continuará apontando para o inode do arquivo
+original, apenas quando todos os links forem apagados
+o inode será marcado como livre.
+
+não é possível fazer hardlinks entre partições diferentes.
+no windows por exemplo:
+C:\... (aqui há uma mft)
+D:\... (aqui há outra  )
+
+os indices podem conflitar, logo não seria possível referenciar
+entre duas unidades de armazenamento.
+além disso, pode-se trabalhar com mais de um sistema de arquivos
+logo, os indices também podem conflitar.
+
+tecnicamente um hardlink é uma nova entrada de diretório para um
+arquivo já existente. (foi o kleber que disse)
+
+--------------------------------------------------------------
+
+Gerenciamento de Espaços livres
+
+bloco de blocos livres
+| 123 	|
+| 231	|
+| ...	|
+| 300	|
+cabe 255 endereços
+1 é para outro bloco de blocos livres
+
+
+mapa de bits:
+
+|100111011010001|
+|011001000010110|
+|111110111101011|
+|...		|
+
+
+Em um sistema de arquivos de 1GB com blocos de 5KB tem
+262.144 blocos (endereços de 32bits)
+
+em blocos de blocos livres:
+4096B / 4B = 1024 (-1) endereços (um de apontamento)
+262.144 / 1023 = 257 blocos x 4KB = 1MB 
+
+em mapa de bits:
+262.144 blocos -> em bits -> 262.144 b = 32KB
+em 100GB -> 268.435.456 blocos -> 268.435.456b ->  256MB
+--------------------------------------------------------------
+
+CONSISTÊNCIA DO SISTEMA DE ARQUIVOS:
+
+para apagar um arquivo em um sistema que usa inode: (nessa ordem)
+	-> marcar os blocos apontados pelo inode
+	   como livres 
+	   (no mapa de bits/lista de blocos)*
+	   	
+	-> remover a entrada de diretório que
+	   aponta para o inode
+	
+	-> marcar o inode como livre*
+
+	* se apenas houver uma única entrada de
+	  diretório (hardlinks)
+
+mas e se a energia acabar?
+
+-> por blocos
+-> por arquivos
+
+
+um software de verificação de sistema de arquivos
+primeiro varre todos os inodes (por isso demora)
+
+[!]
+* essa lista de blocos em uso e blocos livres é gerada
+  pelo software de verificação do sistema de arquivos
+  isso não faz parte do sistema de arquivos, nada consegue
+  ser alterado por elas, qualquer alteração deve ser feita
+  na estrutura do sistema de arquivos * 
+[!]
+
+-> verificação por blocos:
+
+[A]
+
+sistema de arquivos consistente:    
+	bloco:	0 1 2 3 4 5 6 7 8 9
+blocos em uso:  1 1 0 1 0 1 1 1 1 0 
+blocos livres:	0 0 1 0 1 0 0 0 0 1
+
+[B]
+
+sistema de arquivos inconsistente: (bloco 2)
+	bloco:	0 1 2 3 4 5 6 7 8 9
+blocos em uso:  1 1 0 1 0 1 1 1 1 0 
+blocos livres:	0 0 0 0 1 0 0 0 0 1
+
+[C]
+
+sistema de arquivos inconsistente: (bloco 2)
+	bloco:	0 1 2 3 4 5 6 7 8 9
+blocos em uso:  1 1 0 1 0 1 1 1 1 0 
+blocos livres:	0 0 2 0 1 0 0 0 0 1 *
+
+[D]
+sistema de arquivos inconsistente: (bloco 2)
+	bloco:	0 1 2 3 4 5 6 7 8 9
+blocos em uso:  1 1 2 1 0 1 1 1 1 0 
+blocos livres:	0 0 0 0 1 0 0 0 0 1 *
+* só usando lista de blocos livres para aparecer 2
+
+
+como resolver?
+
+[B]
+vá até a estrutura de gerenciamento do sistema de arquivos
+(mapa de bits ou bloco de blocos livres), encontre o bloco
+com problema e altere-o para livre.
+
+[C]
+vá até a estrutura de gerenciamento do sistema de arquivos,
+encontre o bloco com problema e altere-o para um.
+
+[D]
+só acontece se o caso [C] tiver acontecido anteriormente,
+vá até a estrutura de gerenciamento do sistema de arquivos,
+copie as informações do bloco com 2 apontamentos para um 
+bloco livre e faça um dos inodes apontar para lá.
+
+-> verificação por arquivos:
+
+se eu varrer todos os diretórios, consigo todas
+as entradas de diretório para inodes
+
+[A]
+entradas: 0 0 2 2 4 0 0 2 1 1 1 ... 0
+   inode: 0 1 2 3 4 5 6 7 8 9 10 .. n
+
+| inode 2 |
+|links: 2 | tudo ok
+
+[B]
+entradas: 0 0 2 2 4 0 0 2 1 1 1 ... 0
+   inode: 0 1 2 3 4 5 6 7 8 9 10 .. n
+
+| inode 2 |
+|links: 1 | errado, falta uma
+	    solução: acrescentar 1 (2)
+	   
+[C]
+entradas: 0 0 2 2 4 0 0 2 1 1 1 ... 0
+   inode: 0 1 2 3 4 5 6 7 8 9 10 .. n
+
+| inode 2 |
+|links: 3 | errado, tem a mais
+	    solução: reduz 1, já varri o sistema, não há mais um.
+	    
+[D] (mais bizarro)
+entradas: 0 0 0 2 4 0 0 2 1 1 1 ... 0
+   inode: 0 1 2 3 4 5 6 7 8 9 10 .. n
+
+| inode 2 |
+|links: 1 | não tem entrada, é um inode órfão
+	    não foi marcado como livre na exclusão
+	    solução: é criado uma entrada de diretório
+	    no /lost+found/(numero do inode)
+	    nesse caso /lost+found/2, lá fica o arquivo
+	    salvo.
+
+
+isso tudo aqui é quando já deu bosta.
+
+--------------------------------------------------------------
+
+JOURNALING:
+(SISTEMA DE ARQUIVOS DE LOG ESTRUTURADO)
+
+
+qual o problema da verificação de consistência?
+
+sempre que o sistema liga o SO deve verificar todo
+o sistema de arquivos, isso torna o boot muito
+demorado. (sistema de 16MB á fácil, quero ver fazer
+com 2TB).
+
+Transação: 
+conjunto de operações (efetivadas) que todas ser
+concluidas.
+
+exemplo:
+T1 (excluir arquivo)
+-> bloco 01:livre
+-> bloco 02:livre
+-> bloco 03:livre
+-> rm:entradas dir
+-> inode:livre
+
+como é feito?
+existe um arquivo chamado de journal que registra
+todas as transações.
+exemplo:
+
+T1.START; -> marcação de inicio
+T1.LIBERABLOCO01;
+T1.LIBERABLOCO02;
+T1.LIBERABLOCO03;
+T1.REMOVEENTRADA;
+T1.LIBERAINODE##;
+T1.COMMIT; -> marcação de fim
+
+T2.START;
+T2.LIBERABLOCO05;
+--------------------x [caiu a energia]
+<-------------------- [ligou e leu o journal]
+--------------------- [viu que não há commit em T2]
+T2.ROLLBACK;
+T2.MARCABLOCO05OCUPADO;
+T2.COMMIT;
+
+--------------------------------------------------------------
+
+Compactação e desduplicação:
+apresentação 17/09
+
+Sistemas de arquivos como o ntfs e o btrfs compactam arquivos,
+geralmente esses algoritmos procuram por sequências repetidas
+de dados.
+
+exemplo, durante a gravação de um arquivo, se o sistema de arquivos
+descobrir que há uma repetição de bytes de deslocamento, ele pode
+apenas marcar a posição desses bytes de deslocamento:
+
+arquivo: teste.txt
+dados:	 00101011 11111110 00110111 11111110 00011011 11011010
+		     ^   deslocamento  ^
+* meramente ilustrativo
+
+
+--------------------------------------------------------------
+GERENCIAMENTO DE MEMÓRIA (7/10/2024)
+
+
+
+quando se cria um programa...
+uma variável é um endereço de memória...
+compilar é pegar o codigo fonte e transformar em codigo de
+máquina...
+int i = 1 em assembly mov [algum end.], 1
+
+mas, quando o programa compila, não tem como saber onde
+ele será alocado. quando o programa foi compilado a 
+memória estava de um modo, quando é executado, é
+outro.
+
+=-= Espaço de End. =-=
+
+2¹⁶ = 65536 end. = 64kb
+2³² = 4bi   end. = 4gb
+
+
+o compilador gera os endereços seguindo o espaço
+a partir do zero absoluto.
+quando um programa é executado, ele busca o espaço de memória
+disponível e soma com a tabela que o programa gerou
+ao ser compilado:
+
+programa		memória real:
+0 int i			100 int i
+1 int b			101 int b
+2 int c			102 int b
+3			103
+
+pressupõe-se que todo programa começe no end. zero,
+mas o end. de memmória real é totalmente diferente.
+
+--------------------------------------------------------------
+
+#include <stdio.h>
+
+void teste(){
+	int a=1, b=2;
+	printf("Endereco de a: %u\n", &a);
+	printf("Endereco de b: %u\n", &b);
+}
+
+
+
+int main(){
+	int i;
+	int j = 2;
+	char c1 = 'A', c2 = 'B';
+	printf("Endereco de i: %u\n", &i);
+	printf("Endereco de j: %u\n", &j);
+	teste();
+	printf("Endereco de c1: %u\n", &c1);
+	printf("Endereco de c2: %u\n", &c2);
+
+	return 0;
+}
+
+Endereco de i: 2565365216
+Endereco de j: 2565365220
+Endereco de a: 2565365168
+Endereco de b: 2565365172
+Endereco de c1: 2565365214
+Endereco de c2: 2565365215
+
+
+>>> variáveis locais são alocadas na pilha:
+    ou seja:
+    
+    PILHA (cresce de baixo para cima)
+
+	aloca a : 2565365168
+	aloca b : 2565365172
+	aloca c1: 2565365214
+	aloca c2: 2565365215
+	aloca i : 2565365216
+	aloca j : 2565365220
+	
+	
+
+|  Dados |
+| Codigo |
+|  heap  | ↓
+|  ...   |
+| pilha  | ↑
+
+	adicionalmente, quando o compilador executa o
+	programa, ele tamabém salva a "stack base" (SB),
+	o "stack pointer" (SP) e o endereço de retorno
+	de cada variável assim que uma é declarada...
+	
+	
+	
+	aloca a : 2565365168 ← SP 
+	aloca b : 2565365172 ← SB
+	
+	...
+	
+	aloca a : 2565365168 ← SP
+	aloca b : 2565365172
+	aloca c1: 2565365214
+	aloca c2: 2565365215 ← SB
+	
+	...
+	
+	aloca a : 2565365168 ← SP
+	aloca b : 2565365172
+	aloca c1: 2565365214
+	aloca c2: 2565365215
+	aloca i : 2565365216
+	aloca j : 2565365220 ← SB
+	
+	agora olhe o endereço das funções:
+	
+	Endereco da main : 3952497119
+	Endereco de teste: 3952497001
+	
+	as funções ficam na heap.
+	teste vem antes por conta de quando
+	ele está sendo declarado, se for
+	feito como protótipo (teste();)
+	ele aparece depois.
+	
+	as funções podem aparecer em endereços
+	maiores do que as variáveis aqui por
+	conta de que a cada iteração a posição
+	de memória muda.
+	
+	sempre que o programa é executado, 
+	como o compilador não consegue prever
+	os endereços de memória, eles são alocados
+	de acordo com um algoritmo de alocação de
+	memória.
+	
+>>>	uma variável pode ir para a heap
+	basta que se faça um malloc:
+	
+	por exemplo:
+	
+	int *p;		→ p vai ter um end. na pilha
+			   ou seja &p está na pilha.
+	
+	p = (int *) malloc(sizeof(int))
+			→ faz com que se aloque p
+			   na heap.
+			   ou seja, o que está na
+			   pilha aponta para a heap.
+	
+	objdump -d [nome do exe]
+	→ esse comando abre o .o do programa
+	lá é possível ver o codigo de máquina e as
+	instruções.
+	
+	aqui a main:
+	
+	000000000000121f <main>: → 121f é o end. virtual.
+	
+    121f:	f3 0f 1e fa          	endbr64 
+    1223:	55                   	push   %rbp
+    1224:	48 89 e5             	mov    %rsp,%rbp
+    1227:	48 83 ec 20          	sub    $0x20,%rsp
+    122b:	64 48 8b 04 25 28 00 	mov    %fs:0x28,%rax
+    1232:	00 00 
+    1234:	48 89 45 f8          	mov    %rax,-0x8(%rbp)
+    1238:	31 c0                	xor    %eax,%eax
+    123a:	c7 45 ec 02 00 00 00 	movl   $0x2,-0x14(%rbp)
+    1241:	c6 45 e6 41          	movb   $0x41,-0x1a(%rbp)
+    1245:	c6 45 e7 42          	movb   $0x42,-0x19(%rbp)
+    1249:	48 8d 45 e8          	lea    -0x18(%rbp),%rax
+    124d:	48 89 c6             	mov    %rax,%rsi
+    1250:	48 8d 05 e1 0d 00 00 	lea    0xde1(%rip),%rax        # 2038 <d2+0x30>
+    1257:	48 89 c7             	mov    %rax,%rdi
+    125a:	b8 00 00 00 00       	mov    $0x0,%eax
+    125f:	e8 3c fe ff ff       	call   10a0 <printf@plt>
+    1264:	48 8d 45 ec          	lea    -0x14(%rbp),%rax
+    1268:	48 89 c6             	mov    %rax,%rsi
+    126b:	48 8d 05 dd 0d 00 00 	lea    0xddd(%rip),%rax        # 204f <d2+0x47>
+    1272:	48 89 c7             	mov    %rax,%rdi
+    1275:	b8 00 00 00 00       	mov    $0x0,%eax
+    127a:	e8 21 fe ff ff       	call   10a0 <printf@plt>
+    127f:	b8 00 00 00 00       	mov    $0x0,%eax
+    1284:	e8 20 ff ff ff       	call   11a9 <teste>
+    1289:	48 8d 45 e6          	lea    -0x1a(%rbp),%rax
+    128d:	48 89 c6             	mov    %rax,%rsi
+    1290:	48 8d 05 cf 0d 00 00 	lea    0xdcf(%rip),%rax        # 2066 <d2+0x5e>
+    1297:	48 89 c7             	mov    %rax,%rdi
+    129a:	b8 00 00 00 00       	mov    $0x0,%eax
+    129f:	e8 fc fd ff ff       	call   10a0 <printf@plt>
+    12a4:	48 8d 45 e7          	lea    -0x19(%rbp),%rax
+    12a8:	48 89 c6             	mov    %rax,%rsi
+    12ab:	48 8d 05 cb 0d 00 00 	lea    0xdcb(%rip),%rax        # 207d <d2+0x75>
+    12b2:	48 89 c7             	mov    %rax,%rdi
+    12b5:	b8 00 00 00 00       	mov    $0x0,%eax
+    12ba:	e8 e1 fd ff ff       	call   10a0 <printf@plt>
+    12bf:	48 8d 05 59 ff ff ff 	lea    -0xa7(%rip),%rax        # 121f <main>
+    12c6:	48 89 c6             	mov    %rax,%rsi
+    12c9:	48 8d 05 c4 0d 00 00 	lea    0xdc4(%rip),%rax        # 2094 <d2+0x8c>
+    12d0:	48 89 c7             	mov    %rax,%rdi
+    12d3:	b8 00 00 00 00       	mov    $0x0,%eax
+    12d8:	e8 c3 fd ff ff       	call   10a0 <printf@plt>
+    12dd:	48 8d 05 c5 fe ff ff 	lea    -0x13b(%rip),%rax        # 11a9 <teste>
+    12e4:	48 89 c6             	mov    %rax,%rsi
+    12e7:	48 8d 05 bd 0d 00 00 	lea    0xdbd(%rip),%rax        # 20ab <d2+0xa3>
+    12ee:	48 89 c7             	mov    %rax,%rdi
+    12f1:	b8 00 00 00 00       	mov    $0x0,%eax
+    12f6:	e8 a5 fd ff ff       	call   10a0 <printf@plt>
+    12fb:	48 8d 05 c0 0d 00 00 	lea    0xdc0(%rip),%rax        # 20c2 <d2+0xba>
+    1302:	48 89 c7             	mov    %rax,%rdi
+    1305:	e8 76 fd ff ff       	call   1080 <puts@plt>
+    130a:	48 8d 05 f7 0c 00 00 	lea    0xcf7(%rip),%rax        # 2008 <d2>
+    1311:	48 89 c2             	mov    %rax,%rdx
+    1314:	48 8d 05 e9 0c 00 00 	lea    0xce9(%rip),%rax        # 2004 <d1>
+    131b:	48 89 c6             	mov    %rax,%rsi
+    131e:	48 8d 05 b5 0d 00 00 	lea    0xdb5(%rip),%rax        # 20da <d2+0xd2>
+    1325:	48 89 c7             	mov    %rax,%rdi
+    1328:	b8 00 00 00 00       	mov    $0x0,%eax
+    132d:	e8 6e fd ff ff       	call   10a0 <printf@plt>
+    1332:	bf 28 00 00 00       	mov    $0x28,%edi
+    1337:	e8 74 fd ff ff       	call   10b0 <malloc@plt>
+    133c:	48 89 45 f0          	mov    %rax,-0x10(%rbp)
+    1340:	48 8b 45 f0          	mov    -0x10(%rbp),%rax
+    1344:	48 89 c6             	mov    %rax,%rsi
+    1347:	48 8d 05 9c 0d 00 00 	lea    0xd9c(%rip),%rax        # 20ea <d2+0xe2>
+    134e:	48 89 c7             	mov    %rax,%rdi
+    1351:	b8 00 00 00 00       	mov    $0x0,%eax
+    1356:	e8 45 fd ff ff       	call   10a0 <printf@plt>
+    135b:	b8 00 00 00 00       	mov    $0x0,%eax
+    1360:	48 8b 55 f8          	mov    -0x8(%rbp),%rdx
+    1364:	64 48 2b 14 25 28 00 	sub    %fs:0x28,%rdx
+    136b:	00 00 
+    136d:	74 05                	je     1374 <main+0x155>
+    136f:	e8 1c fd ff ff       	call   1090 <__stack_chk_fail@plt>
+    1374:	c9                   	leave  
+    1375:	c3                   	ret    
+
+	
+
+21/10/2024
+
+
+antigamente a memória era pouca, hoje em dia, não temos essa
+preocupação.
+
+como não podemos fazer memórias cache do tamanho que quisermos,
+os engenheiros pensaram em resolver com a [Hierarquia de memória]
+
+como programador, você não se preocupa se algo vai ser guardada
+na memória cache ou na ram. 
+(o SO cuida da RAM, a CPU cuida da cache)
+
+o SO pode usar o disco rígido para colocar parte de processos
+na área de swap se for necessário.
+
+[]-> como era:
+
+	inicialmente não havia abstração de memória,
+	o programa via a memória física.
+	
+	MOV RAX, 1000	--> move o conteúdo do endereço
+			    1000 para o registrador rax
+			    1000 é o endereço REAL.
+			    mas, hoje em dia é IMPOSSÍVEL
+			    saber o endereço direto.
+			    
+			    
+	int i = 0	--> quando isso se tornar assembly
+			    não tem como, hoje em dia, 
+			    saber onde na memória isso será
+			    indicado quando o programa for
+			    executado.
+			    
+			    
+			    
+			    
+há três modos de gerenciar a memória em um SO:
+
+a)
+0xFFFF	|Programa de usuário|
+	|		    |
+	|___________________|
+0	|     SO em RAM	    |
+
+
+desvantagem: você pode acessar algum endereço do SO
+	     e alterar alguma coisa.
+
+b)
+0xFFFF	|     SO em ROM	    | *Read Only Memory
+	|___________________|  Usado em dispositivos embarcados
+	|Programa de usuário|  ou seja, o SO é pequeno.
+0	|		    |  
+
+vantagem: como é ROM, você não consegue mudar nada
+	  você pode até acessar a região de memória
+	  mas o SO não vai sofrer com isso.
+
+
+c)
+0xFFFF	|  Drivers em ROM   | * Drivers básicos, como na BIOS
+	|___________________|   Basic Input and Output System
+	|Programa de usuário|	liga o pc e ja funciona I/O
+	|		    |
+	|___________________|
+0	|     SO em RAM	    |
+
+desvantagem: mesma que a a)
+
+
+a IBM tentou resolver isso dividindo a memória em 2KB
+para acessar essas regiões esses computadores vinham com
+uma peça de hardware que atribuia a cada segmento uma chave
+de 4 bits para que os processos pudessem ser acessados.
+o problema é que como isso permitia vários processos, a alocação
+de memória não poderia mais ser prevista...
+
+
+para isso foi feita a realocação estática, por exemplo:
+
+lin.	cmd.	   mem.
+0  	ADD	   16235
+1	CMP	   16236
+2		   16237
+3		   16238
+4		   16239
+5	JMP 10	   16240   -> esse jmp 10 pularia para 
+			   o endereço 10, mas o programa
+			   está alocado para começar na
+			   16235.
+			   O computador da IBM alterava
+			   esse JMP para (10 + 16235)
+			   ou seja, ficaria assim:
+
+lin.	cmd.	   mem.
+0  	ADD	   16235
+1	CMP	   16236
+2		   16237
+3		   16238
+4		   16239
+5	JMP 16245  16240
+
+
+
+[] -> 	deixar que programas acessem regiões de memória
+	é perigoso, imagine que você tivesse uma linha que
+	fizesse algo como
+	
+	exec("ls bin/dev ");
+	
+	se você tem memória compartilhada, você poderia
+	acessar a região da string "ls bin/dev" e alterar
+	para "shred /dev/sda" criando um comando para
+	limpar o disco completamente sem direito a volta.
+	
+	para evitar que isso aconteça, foi criado um espaço
+	de endereçamento, ou seja, o espaço que você tem
+	disponível. por exemplo, telefones da região
+	018 só podem abranger o espaço entre
+	00000-0000 a 99999-9999.
+	
+	para resolver isso, na cpu fica registrado
+	em dois processadores, o base e o limite a
+	região de inicio e fim do processo.
+	pensando em sigle core:
+	
+	cria processo.
+	|   id   |  base | limite |
+	|  1000  |   0   |   100  |
+	
+	cria outro
+	|   id   |  base | limite |
+	|  1001  |   100 |   200  |
+	
+	quando 1000 entra na cpu fica assim:
+	base: 	0
+	limite: 100
+	
+	quando o 1001 entra, ela muda:
+	base: 	100
+	limite:	200	
+	
+	e fica trocando a cada ciclo da cpu,
+	ou seja, o 1000 não consegue acessar
+	a posição 150 e o 1001 não consegue
+	acessar a 80. cada um no seu quadrado.
+	
+	
+	*O intel 8088 não tinha registrador de
+	 limite, ou seja, ele resolvia a alocação
+	 mas pecava na segurança.
+	 
+	 
+	 
+	 
+
+[] -> 	e se a memória não fosse disponível para vários
+      	processos?
+      	
+      	memoria
+      	|#|	|#|	|#|	|#|	* não havia espaço para	
+      	|#|	|#|	|C|	|C|	  o processo D, o A foi
+	|#|	|#|	|C|	|C|	  removido para dar lugar
+	|#|	|B|	|B|	|B|  	  ao D.
+	|#|	|B|	|B|	|B|
+	|#|	|B|	|B|	|B|	  O problema disso é que
+	|A|	|A|	|A|	|#|	  a memória fica
+	|A|	|A|	|A|	|#|	  fragmentada.
+	|A|	|A|	|A|	|#|
+	|A|	|A|	|A|	|D|
+	|S|	|S|	|S|	|S|	
+	
+	 a)	b)	c)	d)
+		tempo ->
+	S = Sistema Operacional.
+	 A,  B,  C,  D = Processos.
+	|#| |#| |#| |#|
+	|#| |#| |#|
+	|#| |#|
+	|#|
+	
+	
+[] -> 	e se o processo precisar crescer?
+	imagine na situação c) se qualquer um deles
+	precise crescer? imaginando alocação contigua
+	(nesse ponto não tem como ser de outra forma)
+	não tem como sem ter um custo extremamente 
+	elevado.
+	
+	
+	solução 1: (Gastaria espaço)
+	segmentar os dados com espaço para expansão
+	
+	|E|	-> Espaço para expansão
+	|A|	-> Processo
+	
+	solução 2: (a que foi implementada)
+	heap e pilha podem crescer em direções
+	opostas.
+	
+	|  heap  | ↓
+	|  ...   |
+	| pilha  | ↑
+
+	até aqui, cobrimos como as coisas eram antigamente.
+
+
+
+
+
+
+﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌﹌
+
+( °u°) cabô
