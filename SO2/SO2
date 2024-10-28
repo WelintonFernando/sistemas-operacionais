@@ -1029,13 +1029,68 @@ que possa armazenar aquilo que você quer.
    O problema disso é fazer a fusão de espaços livres
    é complicado saber quem são seus vizinhos, nessa
    tabela apenas se sabe o espaço livre e tem uma lista.
-   
-   
-   
+
+
    (Tarefa: 
    	Pesquisar sobre Buddy/Slab, a forma como
    	o Linux gerencia a memória)
 
+Algoritmo Buddy:
+
+funciona da seguinte forma, inicialmente a memória consiste
+em um único fragmento contíguo, se há uma solicitação de 
+memória, o algoritmo arredonda para uma potência de 2, e divide
+o bloco de memória no meio até chegar no valor da requisição,
+por exemplo:
+
+memória total: 64 páginas
+solicitação  : 8 páginas  
+
+a memória vai se fragmentar em 2 pedaços de 32 páginas, em
+seguida uma de 32 se fragmentará em 2 de 16, e uma dessa de
+16 em duas de 8 e assim vai comportar o valor solicitado.
+
+|		64		| a)
+|	32	 |	32	| b)
+|	32	 |  16  |  16   | c)
+|	32	 |  16  | 8 | 8 | d)
+|	32	 |  16  | 8 |#8#| e)
+ 
+se uma outra solicitação de 8 páginas ocorrer, ela será
+alocada instantaneamente.
+
+|	32	 |  16  |#8#|#8#| f)
+
+se uma solicitação de 4 páginas ocorrer, ocorrerá a
+fragmentação do menor bloco existente, no caso o de 16
+páginas, se quebrará em duas de 8 e uma dessas de 8 em
+duas de 4, comportando a solicitação.
+
+|	32	 | 8 |4|#|#8#|#8#| g)
+
+se os dois blocos anteriores forem liberados, como eles
+vieram do mesmo bloco eles se unirão novamente em um bloco
+de 16 páginas.
+
+|	32	 | 8 |4|#| 8 |#8#| h)
+|	32	 | 8 |4|#|   16  | i)
+
+o problema desse algoritmo é que se você precisar de 65
+páginas, precisará solicitar e receber um bloco de 128 páginas, 
+criando assim uma grande fragmentação.
+
+Algoritmo Slabs:
+
+Usa a obtenção de blocos do algoritmo buddy, mas separa eles em
+unidades menores chamadas de fatias ou slabs e as gerencia
+separadamente. Como o núcleo cria e destrói objetos de um tipo
+com muita frequência o algoritmo usa chaches de objetos, que são
+ponteiros para uma ou mais fatias que armazenam objetos do tipo,
+essas que podem estar cheias, parcialmente cheias ou vazias. Quando
+o núcleo precisa alocar espaço para um descritor de processo
+(um objeto "task_struct") ele irá consultar o cache de objetos em
+busca de uma fatia parcialmente cheia para aloca-lo ali, se não houver
+uma fatia disponível ele alocará em uma vazia.
 
 
 
